@@ -513,7 +513,9 @@ public class RDBMSDatabase implements Database {
 
 		ResultSet rs = queryDBForAtom(qAtom);
 		try {
-			if (rs.next()) {
+		 	boolean inWritePartition = false;
+
+		 	while (rs.next() && !inWritePartition) {
 					double value = rs.getDouble(ph.valueColumn());
 					// need to check whether the previous double is null, if so set it specifically to NaN
 					if (rs.wasNull()) value = Double.NaN;
@@ -530,12 +532,11 @@ public class RDBMSDatabase implements Database {
 		 				// Predicate is open, instantiate as RandomVariableAtom
 		 				result = cache.instantiateRandomVariableAtom((StandardPredicate) p, arguments, value, confidence);
 		 			}
+		 			inWritePartition = true;
 		 		} else {
 		 			// Must be in a read partition, instantiate as ObservedAtom
 		 			result = cache.instantiateObservedAtom(p, arguments, value, confidence);
 		 		}
-		 		if (rs.next())
-		 			throw new IllegalStateException("Atom cannot exist in more than one partition.");
 			}
 			rs.close();
 		} catch (SQLException e) {
